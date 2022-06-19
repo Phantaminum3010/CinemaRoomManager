@@ -10,9 +10,18 @@ public class Cinema {
     int currentIncome;
     int numRows;
     int numSeatsPerRow;
+    int rowChosen;
+    int seatNumberChosen;
     String[][] cinemaSeats;
 
+    public enum State {
+        SHOW_MENU, SHOW_SEATS, CHOOSE_ROW, CHOOSE_SEAT_NUMBER, SHOW_STATISTICS, EXIT
+    }
+
+    State state;
+
     public Cinema(int numRows, int numSeatsPerRow) {
+        this.state = State.SHOW_MENU;
         this.purchasedTickets = 0;
         this.currentIncome = 0;
         this.numRows = numRows;
@@ -43,67 +52,21 @@ public class Cinema {
 
         Cinema cinema = new Cinema(numRows, numSeatsPerRow);
 
-        printMenu();
-        int input = scanner.nextInt();
-        while (input != 0) {
-            switch(input) {
-                case 1:
-                    printCinema(cinema.cinemaSeats);
-                    break;
-                case 2:
-                    System.out.println();
-                    System.out.println("Enter a row number:");
-                    int rowChosen = scanner.nextInt();
-                    System.out.println("Enter a seat number in that row:");
-                    int seatNumber = scanner.nextInt();
-                    while (rowChosen < 0 || rowChosen > cinema.cinemaSeats.length - 1 || seatNumber < 0 ||
-                            seatNumber > cinema.cinemaSeats[rowChosen].length - 1 ||
-                            cinema.cinemaSeats[rowChosen][seatNumber].equals("B ")) {
-                        System.out.println();
-                        if (rowChosen < 0 || rowChosen > cinema.cinemaSeats.length - 1 || seatNumber < 0 ||
-                                seatNumber > cinema.cinemaSeats[rowChosen].length - 1) {
-                            System.out.println("Wrong input!");
-                        } else {
-                            System.out.println("That ticket has already been purchased!");
-                        }
-                        System.out.println();
-                        System.out.println("Enter a row number:");
-                        rowChosen = scanner.nextInt();
-                        System.out.println("Enter a seat number in that row:");
-                        seatNumber = scanner.nextInt();
-                    }
-                    chooseTicket(numRows, numSeatsPerRow, rowChosen, seatNumber, cinema);
-                    break;
-                case 3:
-                    System.out.println();
-                    System.out.println("Number of purchased tickets: " + cinema.purchasedTickets);
-                    double percentage = (cinema.purchasedTickets * 1.00) / (cinema.numRows * cinema.numSeatsPerRow);
-                    percentage *= 100;
-                    System.out.printf("Percentage: %.2f%c", percentage, '%');
-                    System.out.println();
-                    System.out.println("Current income: $" + cinema.currentIncome);
-                    int totalSeats = cinema.numSeatsPerRow * cinema.numRows;
-                    if (totalSeats <= 60) {
-                        System.out.println("Total income: $" + totalSeats * ticketPriceTypeI);
-                    } else {
-                        int priorityRows = cinema.numRows / 2;
-                        int totalIncome = (priorityRows * ticketPriceTypeI +
-                                (cinema.numRows - priorityRows) * ticketPriceTypeII) * cinema.numSeatsPerRow;
-                        System.out.println("Total income: $" + totalIncome);
-                    }
-                    break;
-                default:
-                    break;
+        while (cinema.state != State.EXIT) {
+            cinema.processState();
+            if (cinema.state == State.SHOW_MENU || cinema.state == State.CHOOSE_ROW ||
+                    cinema.state == State.CHOOSE_SEAT_NUMBER) {
+                cinema.processRequest(scanner.next());
+            } else {
+                cinema.state = State.SHOW_MENU;
             }
-            printMenu();
-            input = scanner.nextInt();
         }
     }
 
-    private static void printCinema(String[][] cinemaSeats) {
+    private void printCinema() {
         System.out.println();
         System.out.println("Cinema:");
-        for (String[] cinemaSeat : cinemaSeats) {
+        for (String[] cinemaSeat : this.cinemaSeats) {
             for (String s : cinemaSeat) {
                 System.out.print(s);
             }
@@ -119,7 +82,7 @@ public class Cinema {
         System.out.println("0. Exit");
     }
 
-    private static void chooseTicket(int numRows, int numSeatsPerRow, int rowChosen, int seatNumber, Cinema cinema) {
+    private void chooseTicket(int numRows, int numSeatsPerRow, int rowChosen, int seatNumber) {
         int ticketPrice;
 
         int totalSeats = numSeatsPerRow * numRows;
@@ -132,9 +95,102 @@ public class Cinema {
                 ticketPrice = ticketPriceTypeII;
             }
         }
+        System.out.println();
         System.out.println("Ticket price: $" + ticketPrice);
-        cinema.cinemaSeats[rowChosen][seatNumber] = "B ";
-        cinema.purchasedTickets++;
-        cinema.currentIncome += ticketPrice;
+        this.cinemaSeats[rowChosen][seatNumber] = "B ";
+        this.purchasedTickets++;
+        this.currentIncome += ticketPrice;
+    }
+
+    private void showStatistics() {
+        System.out.println();
+        System.out.println("Number of purchased tickets: " + this.purchasedTickets);
+        double percentage = (this.purchasedTickets * 1.00) / (this.numRows * this.numSeatsPerRow);
+        percentage *= 100;
+        System.out.printf("Percentage: %.2f%c", percentage, '%');
+        System.out.println();
+        System.out.println("Current income: $" + this.currentIncome);
+        int totalSeats = this.numSeatsPerRow * this.numRows;
+        if (totalSeats <= 60) {
+            System.out.println("Total income: $" + totalSeats * ticketPriceTypeI);
+        } else {
+            int priorityRows = this.numRows / 2;
+            int totalIncome = (priorityRows * ticketPriceTypeI +
+                    (this.numRows - priorityRows) * ticketPriceTypeII) * this.numSeatsPerRow;
+            System.out.println("Total income: $" + totalIncome);
+        }
+    }
+
+    private void processState() {
+        switch(this.state) {
+            case SHOW_MENU:
+                printMenu();
+                break;
+            case SHOW_STATISTICS:
+                this.showStatistics();
+                break;
+            case SHOW_SEATS:
+                this.printCinema();
+                break;
+            case CHOOSE_ROW:
+                System.out.println();
+                System.out.println("Enter a row number:");
+                break;
+            case CHOOSE_SEAT_NUMBER:
+                System.out.println("Enter a seat number in that row:");
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void processRequest(String request) {
+        int input = Integer.parseInt(request);
+        switch(this.state) {
+            case SHOW_MENU:
+                switch(input) {
+                    case 1:
+                        this.state = State.SHOW_SEATS;
+                        break;
+                    case 2:
+                        this.state = State.CHOOSE_ROW;
+                        break;
+                    case 3:
+                        this.state = State.SHOW_STATISTICS;
+                        break;
+                    case 0:
+                        this.state = State.EXIT;
+                        break;
+                    default:
+                        System.out.println("Invalid option, please choose again!");
+                        break;
+                }
+                break;
+            case CHOOSE_ROW:
+                this.rowChosen = input;
+                this.state = State.CHOOSE_SEAT_NUMBER;
+                break;
+            case CHOOSE_SEAT_NUMBER:
+                if (this.rowChosen > 0 && this.rowChosen < this.cinemaSeats.length &&
+                        input > 0 && input < this.cinemaSeats[this.rowChosen].length) {
+                    this.seatNumberChosen = input;
+                    if (this.cinemaSeats[this.rowChosen][this.seatNumberChosen].equals("B ")) {
+                        System.out.println();
+                        System.out.println("That ticket has already been purchased");
+                        this.state = State.CHOOSE_ROW;
+                    } else {
+                        chooseTicket(this.numRows, this.numSeatsPerRow, this.rowChosen,
+                                this.seatNumberChosen);
+                        this.state = State.SHOW_MENU;
+                    }
+                } else {
+                    System.out.println();
+                    System.out.println("Wrong input!");
+                    this.state = State.CHOOSE_ROW;
+                }
+                break;
+            default:
+                break;
+        }
     }
 }
